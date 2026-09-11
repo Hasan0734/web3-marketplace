@@ -150,8 +150,7 @@ describe("ProjectContract", function () {
     });
   });
 
-
-describe("Work Submission & Payment Release (With Refund Logic)", function () {
+  describe("Work Submission & Payment Release (With Refund Logic)", function () {
     const title = "Fix Website";
     const description = "Fix UI bugs";
     const budget = ethers.parseEther("1.0");
@@ -175,6 +174,14 @@ describe("Work Submission & Payment Release (With Refund Logic)", function () {
 
       const project = await projectContract.projects(1);
       expect(project.isWorkSubmited).to.be.true;
+    });
+
+    it("Should revert if freelancer tries to submit work after deadline", async function () {
+      await ethers.provider.send("evm_setNextBlockTimestamp", [deadline + 1]);
+      await ethers.provider.send("evm_mine");
+      await expect(
+        projectContract.connect(freelancer).submitWork(1),
+      ).to.be.revertedWith("Deadline has passed");
     });
 
     it("Should distribute payout to freelancer and auto-refund surplus to client", async function () {
