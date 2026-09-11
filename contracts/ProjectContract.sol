@@ -38,7 +38,7 @@ contract ProjectContract {
     mapping(address => mapping(uint256 => uint256)) public freelancerBids;
 
     event CreateProject(
-        uint256 indexed projectId,
+        uint256 indexed projectCount,
         address indexed owner,
         uint256 budget
     );

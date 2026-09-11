@@ -10,12 +10,11 @@ describe("ProjectContract", function () {
 
   beforeEach(async function () {
     [client, freelancer, otherUser] = await ethers.getSigners();
-    // const ProjectContract = await ethers.getContractFactory("ProjectContract");
 
     projectContract = await ethers.deployContract("ProjectContract");
 
     const latestBlock = await ethers.provider.getBlock("latest");
-    deadline = latestBlock?.timestamp + 7 * 24 * 60 * 60; // next 7 days
+    deadline = latestBlock.timestamp + 7 * 24 * 60 * 60;
   });
 
   describe("Project creation", function () {
@@ -37,23 +36,22 @@ describe("ProjectContract", function () {
       const project = await projectContract.projects(1);
       expect(project.title).to.equal(title);
       expect(project.budget).to.equal(budget);
-      expect(project.currentStatus).to.equal(0);
+      expect(project.currentStatus).to.equal(0); // Status.Pending
     });
 
     it("should revert if budget is 0", async function () {
-      expect(
+      await expect(
         projectContract
           .connect(client)
           .createProject(title, description, deadline, { value: 0 }),
       ).to.be.revertedWith("Budget must be greater than 0");
     });
-    it("should revert if deadline is passed", function () {
-      expect(
-        projectContract
-          .connect(client)
-          .createProject(title, description, 1789104604, {
-            value: budget,
-          }),
+
+    it("should revert if deadline is passed", async function () {
+      await expect(
+        projectContract.connect(client).createProject(title, description, 0, {
+          value: budget,
+        }),
       ).to.be.revertedWith("Deadline must be in the future.");
     });
   });
@@ -68,6 +66,26 @@ describe("ProjectContract", function () {
         .createProject(title, description, deadline, {
           value: ethers.parseEther("1.0"),
         });
+    });
+
+    it("Should revert if project id does not exist", async function () {
+      const bidAmount = ethers.parseEther("0.8");
+      await expect(
+        projectContract.connect(freelancer).submitBid(100, bidAmount),
+      ).to.be.revertedWith("Project does not exist.");
+    });
+
+    it("Should revert if project is not accepting bids", async function () {
+      const bidAmount = ethers.parseEther("0.8");
+
+      await projectContract.connect(freelancer).submitBid(1, bidAmount);
+      await projectContract
+        .connect(client)
+        .assignFreelancer(1, freelancer.address);
+
+      await expect(
+        projectContract.connect(otherUser).submitBid(1, bidAmount),
+      ).to.be.revertedWith("Project is not accepting bids.");
     });
 
     it("Should allow freelancers to submit a bid within budget", async function () {
@@ -85,7 +103,7 @@ describe("ProjectContract", function () {
     });
 
     it("Should revert if bid exceeds project budget", async function () {
-      const highBid = ethers.parseEther("1.2"); // বাজেটের চেয়ে বেশি বিড
+      const highBid = ethers.parseEther("1.2");
       await expect(
         projectContract.connect(freelancer).submitBid(1, highBid),
       ).to.be.revertedWith("Bid cannot exceed client budget");
@@ -107,7 +125,15 @@ describe("ProjectContract", function () {
         .submitBid(1, ethers.parseEther("0.8"));
     });
 
-    it("Should allow owner to assing a valid bidder", async function () {
+    it("Should revert if project id does not exist", async function () {
+      await expect(
+        projectContract
+          .connect(client)
+          .assignFreelancer(100, freelancer.address),
+      ).to.be.revertedWith("Project does not exist.");
+    });
+
+    it("Should allow owner to assign a valid bidder", async function () {
       await expect(
         projectContract.connect(client).assignFreelancer(1, freelancer.address),
       )
@@ -115,7 +141,7 @@ describe("ProjectContract", function () {
         .withArgs(1, freelancer.address);
     });
 
-    it("Should revert if non-owner tries to assing a freelancer", async function () {
+    it("Should revert if non-owner tries to assign a freelancer", async function () {
       await expect(
         projectContract
           .connect(otherUser)
@@ -124,7 +150,8 @@ describe("ProjectContract", function () {
     });
   });
 
-  describe("Work Submission & Payment Release (With Refund Logic)", function () {
+
+describe("Work Submission & Payment Release (With Refund Logic)", function () {
     const title = "Fix Website";
     const description = "Fix UI bugs";
     const budget = ethers.parseEther("1.0");
@@ -141,36 +168,49 @@ describe("ProjectContract", function () {
     });
 
     it("Should allow freelancer to submit work", async function () {
-      const latestBlock = await ethers.provider.getBlock("latest");
-      await expect(projectContract.connect(freelancer).submitWork(1))
-        .to.emit(projectContract, "WorkSubmitted")
+      await expect(projectContract.connect(freelancer).submitWork(1)).to.emit(
+        projectContract,
+        "WorkSubmitted",
+      );
 
       const project = await projectContract.projects(1);
       expect(project.isWorkSubmited).to.be.true;
     });
-    it("Should distribute payout to freelancer and auto-refund surplus to client", async function(){
-        await projectContract.connect(freelancer).submitWork(1);
 
-        const initalFreelancerBalance = await ethers.provider.getBalance(freelancer.address);
-        const initalClientBalance = await ethers.provider.getBalance(client.address);
-        
-        const tx = await projectContract.connect(client).releasePayment(1);
-        const receipt = await tx.wait();
+    it("Should distribute payout to freelancer and auto-refund surplus to client", async function () {
+      await projectContract.connect(freelancer).submitWork(1);
 
-        const gasUsed = receipt.gasUsed * receipt.gasPrice;
+      const initalFreelancerBalance = await ethers.provider.getBalance(
+        freelancer.address,
+      );
+      const initalClientBalance = await ethers.provider.getBalance(
+        client.address,
+      );
 
-        const finalFreelancerBalance =await ethers.provider.getBalance(freelancer.address);
-        const finalClientBalance =await ethers.provider.getBalance(client.address);
+      const tx = await projectContract.connect(client).releasePayment(1);
+      const receipt = await tx.wait();
 
-        expect(finalFreelancerBalance).to.equal(initalFreelancerBalance +  bidAmount);
+      const gasUsed = receipt.gasUsed * receipt.gasPrice;
 
-        const expectedRefund = budget - bidAmount;
-        
-        expect(finalClientBalance).to.equal(initalClientBalance - gasUsed + expectedRefund);
+      const finalFreelancerBalance = await ethers.provider.getBalance(
+        freelancer.address,
+      );
+      const finalClientBalance = await ethers.provider.getBalance(
+        client.address,
+      );
 
-        const project = await projectContract.projects(1);
-        expect(project.currentStatus).to.equal(2);
+      expect(finalFreelancerBalance).to.equal(
+        initalFreelancerBalance + bidAmount,
+      );
 
-    })
+      const expectedRefund = budget - bidAmount;
+
+      expect(finalClientBalance).to.equal(
+        initalClientBalance - gasUsed + expectedRefund,
+      );
+
+      const project = await projectContract.projects(1);
+      expect(project.currentStatus).to.equal(2); // Status.Completed
+    });
   });
 });
