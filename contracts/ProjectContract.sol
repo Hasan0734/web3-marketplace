@@ -19,46 +19,46 @@ contract ProjectContract {
         Cancelled
     }
     struct Project {
-        uint projectId;
+        uint256 projectId;
         string title;
         string description;
-        uint budget;
-        uint deadline;
+        uint256 budget;
+        uint256 deadline;
         address payable owner;
         address freelancer;
         Status currentStatus;
         bool isWorkSubmited;
     }
 
-    uint public projectCount;
+    uint256 public projectCount;
 
-    mapping(uint => Project) public projects;
-    mapping(address => uint[]) private _clientProjects;
-    mapping(address => uint[]) private _freelancerProjects;
+    mapping(uint256 => Project) public projects;
+    mapping(address => uint256[]) private _clientProjects;
+    mapping(address => uint256[]) private _freelancerProjects;
     mapping(address => mapping(uint256 => uint256)) public freelancerBids;
 
     event CreateProject(
-        uint indexed projectId,
+        uint256 indexed projectId,
         address indexed owner,
-        uint budget
+        uint256 budget
     );
-    event ProjectBid(uint indexed projectId, address freelancer);
+    event ProjectBid(uint256 indexed projectId, address freelancer);
     event FreelancerAssigned(
-        uint indexed projectId,
+        uint256 indexed projectId,
         address indexed freelancer
     );
     event WorkSubmitted(
-        uint indexed projectId,
+        uint256 indexed projectId,
         address indexed freelancer,
-        uint timestamp
+        uint256 timestamp
     );
     event PaymentReleased(
-        uint indexed projectId,
+        uint256 indexed projectId,
         address indexed freelancer,
-        uint amount
+        uint256 amount
     );
 
-    modifier checkProjectExist(uint _projectId) {
+    modifier checkProjectExist(uint256 _projectId) {
         require(
             projects[_projectId].owner != address(0),
             "Project does not exist."
@@ -69,8 +69,8 @@ contract ProjectContract {
     function createProject(
         string memory _title,
         string memory _description,
-        uint _deadline
-    ) public payable returns (uint) {
+        uint256 _deadline
+    ) public payable returns (uint256) {
         require(msg.value > 0, "Budget must be greater than 0");
         require(_deadline > block.timestamp, "Deadline must be in the future.");
         projectCount++;
@@ -93,8 +93,8 @@ contract ProjectContract {
     }
 
     function submitBid(
-        uint _projectId,
-        uint _bidAmount
+        uint256 _projectId,
+        uint256 _bidAmount
     ) public checkProjectExist(_projectId) {
         require(
             projects[_projectId].currentStatus == Status.Pending,
@@ -110,7 +110,7 @@ contract ProjectContract {
     }
 
     function assignFreelancer(
-        uint _projectId,
+        uint256 _projectId,
         address _freelancer
     ) public checkProjectExist(_projectId) {
         Project storage project = projects[_projectId];
@@ -134,7 +134,7 @@ contract ProjectContract {
         emit FreelancerAssigned(_projectId, _freelancer);
     }
 
-    function submitWork(uint _projectId) public checkProjectExist(_projectId) {
+    function submitWork(uint256 _projectId) public checkProjectExist(_projectId) {
         Project storage project = projects[_projectId];
 
         require(
@@ -152,7 +152,7 @@ contract ProjectContract {
     }
 
     function releasePayment(
-        uint _projectId
+        uint256 _projectId
     ) public checkProjectExist(_projectId) nonReentrant {
         Project storage project = projects[_projectId];
 
@@ -166,8 +166,8 @@ contract ProjectContract {
         );
         require(project.isWorkSubmited, "Work has not been submitted yet");
 
-        uint freelancerPayout = freelancerBids[project.freelancer][_projectId];
-        uint clientRefund = project.budget - freelancerPayout;
+        uint256 freelancerPayout = freelancerBids[project.freelancer][_projectId];
+        uint256 clientRefund = project.budget - freelancerPayout;
         project.currentStatus = Status.Completed;
 
         (bool success1, ) = payable(project.freelancer).call{
@@ -183,13 +183,13 @@ contract ProjectContract {
 
     function getClientProjects(
         address _client
-    ) public view returns (uint[] memory) {
+    ) public view returns (uint256[] memory) {
         return _clientProjects[_client];
     }
 
     function getFreelancerProjects(
         address _freelancer
-    ) public view returns (uint[] memory) {
+    ) public view returns (uint256[] memory) {
         return _freelancerProjects[_freelancer];
     }
 }

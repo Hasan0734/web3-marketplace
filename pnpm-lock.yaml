@@ -15,12 +15,24 @@ importers:
       '@nomicfoundation/hardhat-ethers':
         specifier: ^4.0.15
         version: 4.0.15(hardhat@3.16.0)
+      '@nomicfoundation/hardhat-ethers-chai-matchers':
+        specifier: ^3.0.11
+        version: 3.0.11(@nomicfoundation/hardhat-ethers@4.0.15(hardhat@3.16.0))(chai@6.2.2)(ethers@6.17.0)(hardhat@3.16.0)
       '@nomicfoundation/hardhat-ignition':
         specifier: ^3.1.8
         version: 3.1.8(@nomicfoundation/hardhat-verify@3.1.0(hardhat@3.16.0))(hardhat@3.16.0)
+      '@nomicfoundation/hardhat-mocha':
+        specifier: ^3.1.0
+        version: 3.1.0(hardhat@3.16.0)(mocha@11.8.0)
+      '@nomicfoundation/hardhat-network-helpers':
+        specifier: ^3.0.11
+        version: 3.0.11(hardhat@3.16.0)
       '@nomicfoundation/hardhat-toolbox-mocha-ethers':
         specifier: ^3.0.7
         version: 3.0.7(ee79201ceaa0ab7e5858e694a80d376a)
+      '@nomicfoundation/hardhat-typechain':
+        specifier: ^3.1.1
+        version: 3.1.1(@nomicfoundation/hardhat-ethers@4.0.15(hardhat@3.16.0))(ethers@6.17.0)(hardhat@3.16.0)(typescript@6.0.3)
       '@types/chai':
         specifier: ^5.2.3
         version: 5.2.3
